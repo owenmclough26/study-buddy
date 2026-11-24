@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
     await notify(c.user_id, {
       title: mins <= 1 ? `Time for ${t.title}` : `${t.title} in ${mins} min`,
       body: `${name} is waiting in the ${ROOM_NAMES[t.category] ?? 'study room'}. Tap to start.`,
-      url: `/rooms/${t.category}?task=${c.task_id}&chunk=${c.id}`,
+      url: `/rooms/${t.category}?task=${c.task_id}&chunk=${c.id}&from=reminder`,
       tag: c.id,
     })
     stats.sessions++
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
       await notify(p.id, {
         title: `Tomorrow: ${tomorrows.length} session${tomorrows.length === 1 ? '' : 's'} planned`,
         body: `First up: ${first.tasks!.title} at ${fmtTime(new Date(first.start_at), local.tz)}. ${name} will remind you.`,
-        url: '/',
+        url: '/?from=summary',
         tag: 'summary',
       })
       stats.summaries++

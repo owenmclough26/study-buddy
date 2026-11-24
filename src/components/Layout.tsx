@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { pageview, resetAnalytics } from '../lib/analytics'
+import { NavLink, Outlet, useLocation, useSearchParams } from 'react-router-dom'
+import { pageview, resetAnalytics, track } from '../lib/analytics'
 import { useData } from '../lib/store'
 import { supabase } from '../lib/repo'
 import { Coin, Flame, Icon, type IconName } from './Icon'
@@ -19,6 +19,17 @@ export function Layout() {
   const streak = state.profile?.streak ?? 0
   const { pathname } = useLocation()
   useEffect(() => pageview(pathname), [pathname])
+
+  // count app opens that came from a reminder, then tidy the link
+  const [params, setParams] = useSearchParams()
+  useEffect(() => {
+    const from = params.get('from')
+    if (from !== 'reminder' && from !== 'summary') return
+    track('opened_from_notification', { kind: from })
+    const next = new URLSearchParams(params)
+    next.delete('from')
+    setParams(next, { replace: true })
+  }, [params, setParams])
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-30 border-b-[1.5px] border-line bg-cream/90 pt-[env(safe-area-inset-top)] backdrop-blur-sm">

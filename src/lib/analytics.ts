@@ -64,6 +64,7 @@ export type AnalyticsEvent =
   | 'relax_break_taken'
   | 'shop_purchase'
   | 'reminders_enabled'
+  | 'opened_from_notification'
 
 export function track(event: AnalyticsEvent, props?: Record<string, string | number | boolean>) {
   run((p) => p.capture(event, props))
