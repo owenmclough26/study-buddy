@@ -1,13 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../../lib/store'
-import { evolutionStage, mood, RELAX_COST_MIN, SHOP, STAGE_NAMES, xpForLevel, type Mood, type ShopItem } from '../../lib/rewards'
-import { categoryInfo, type Buddy, type Chunk, type Task } from '../../lib/types'
+import { evolutionStage, RELAX_COST_MIN, STAGE_NAMES, xpForLevel } from '../../lib/rewards'
+import { categoryInfo, type Chunk, type Task } from '../../lib/types'
 import { dateKey, fmtDuration, fmtTime } from '../../lib/time'
+import { placedDecor, type DecorItem } from '../../lib/decor'
+import { earnedTraitIds, milestones, personalityTitle, studyStats, traitStatuses } from '../../lib/journal'
 import { roomLink } from '../../components/roomLink'
-import { Coin, Icon, type IconName } from '../../components/Icon'
-import { BuddySprite } from './BuddySprite'
-import { RoomScene, dayPart, type DayPart } from './RoomScene'
+import { Icon, type IconName } from '../../components/Icon'
+import { CatRoom } from './CatRoom'
+import { Shop } from './Shop'
+import { dayPart, type DayPart } from './RoomScene'
+import { newUnlocks, markUnlocksSeen } from './unlocks'
 
 function greeting(part: DayPart, h: number) {
   if (h < 5) return 'Still up?'
@@ -16,43 +20,29 @@ function greeting(part: DayPart, h: number) {
   return 'Good evening'
 }
 
-function lines(b: Buddy, m: Mood, part: DayPart, next: { chunk: Chunk; task: Task } | null, breakReady: boolean): string[] {
-  if (breakReady) return ['you earned a break. go outside!', 'screen break time? 🌿']
-  if (next) {
-    const mins = Math.round((new Date(next.chunk.start_at).getTime() - Date.now()) / 60_000)
-    if (mins <= 0) return [`${next.task.title.toLowerCase()} time! let's go`]
-    if (mins <= 45) return [`${next.task.title.toLowerCase()} in ${mins} min`, 'almost time to lock in']
-  }
-  if (part === 'night' && m !== 'sad') return ['getting sleepy… see you tomorrow', 'good night soon?']
-  switch (m) {
-    case 'happy':
-      return ["we're on a roll!", 'i feel so smart today', 'best study day ever']
-    case 'neutral':
-      return ['wanna study together?', "what's next on the list?", `hi! it's me, ${b.name.toLowerCase()}`]
-    case 'tired':
-      return ['so sleepy… snack?', 'running on fumes here', 'is there any cake?']
-    case 'sad':
-      return ['i missed you…', 'can we do one thing together?', 'it got kinda lonely']
-  }
-}
-
 export function HomePage() {
   const { state } = useData()
   const b = state.buddy!
-  const p = state.profile!
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
     const t = window.setInterval(() => setNow(new Date()), 60_000)
     return () => window.clearInterval(t)
   }, [])
-  const [lineIdx, setLineIdx] = useState(0)
-  const [boop, setBoop] = useState(0)
+  const [preview, setPreview] = useState<DecorItem | null>(null)
 
-  const m = mood(b)
   const stage = evolutionStage(b.level)
   const part = dayPart(now)
   const today = dateKey(now)
   const tasksById = new Map(state.tasks.map((t) => [t.id, t]))
+
+  // the cat's personality and memories, from your study history
+  const stats = useMemo(() => studyStats(state.sessions, state.tasks), [state.sessions, state.tasks])
+  const traits = useMemo(() => traitStatuses(stats), [stats])
+  const earned = useMemo(() => earnedTraitIds(traits), [traits])
+  const mems = useMemo(() => milestones(state.sessions, state.tasks, b), [state.sessions, state.tasks, b])
+  const title = personalityTitle(traits)
+  const [fresh, setFresh] = useState(() => newUnlocks(traits, mems))
+  useEffect(() => setFresh(newUnlocks(traits, mems)), [traits, mems])
 
   const plan = state.chunks
     .filter((c) => c.status === 'planned' && new Date(c.end_at) > now && dateKey(new Date(c.start_at)) === today && tasksById.has(c.task_id))
@@ -61,13 +51,10 @@ export function HomePage() {
   const doneToday =
     state.tasks.filter((t) => t.completed_at && dateKey(new Date(t.completed_at)) === today).length +
     state.sessions.filter((s) => s.room !== 'relax' && dateKey(new Date(s.started_at)) === today).length
-  const focusedToday = state.sessions
-    .filter((s) => s.room !== 'relax' && dateKey(new Date(s.started_at)) === today)
-    .reduce((sum, s) => sum + s.minutes, 0)
-  const breakReady = p.relax_minutes_banked >= RELAX_COST_MIN
-  const said = lines(b, m, part, next, breakReady)
-  const line = said[lineIdx % said.length]
+  const focusedToday = state.sessions.filter((s) => s.room !== 'relax' && dateKey(new Date(s.started_at)) === today).reduce((sum, s) => sum + s.minutes, 0)
   const plannedMin = plan.reduce((s, c) => s + (new Date(c.end_at).getTime() - new Date(c.start_at).getTime()) / 60_000, 0)
+
+  const decor = { ...placedDecor(b), ...(preview ? { [preview.slot]: preview.id } : {}) }
 
   return (
     <div className="space-y-6">
@@ -81,41 +68,46 @@ export function HomePage() {
         </div>
       </div>
 
+      {fresh.length > 0 && (
+        <div className="anim-pop card flex flex-wrap items-center gap-3 border-mustard bg-mustard-soft p-4">
+          <span className="text-3xl" aria-hidden>
+            {fresh[0].sticker}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-lg font-semibold">{fresh.length === 1 ? fresh[0].title : `${fresh.length} new memories!`}</div>
+            <div className="text-sm text-ink/65">{fresh.length === 1 ? fresh[0].detail : fresh.map((f) => f.title).slice(0, 3).join(' · ')}</div>
+          </div>
+          <Link to="/memories" className="btn-primary" onClick={() => markUnlocksSeen(traits, mems)}>
+            See them
+          </Link>
+          <button
+            className="text-sm font-bold text-ink/45 hover:text-ink"
+            onClick={() => {
+              markUnlocksSeen(traits, mems)
+              setFresh([])
+            }}
+          >
+            Later
+          </button>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[1.65fr_1fr]">
         <section className="card p-2.5">
-          <RoomScene part={part} notesToday={doneToday}>
-            {/* speech bubble */}
-            <div
-              key={line}
-              className="anim-pop absolute left-[47%] top-[41%] max-w-[40%] rounded-2xl border-2 border-ink/80 bg-paper px-3 py-1.5 font-hand text-lg leading-tight text-ink sm:text-2xl"
-            >
-              {line}
-              <span className="absolute -bottom-[9px] left-5 h-4 w-4 rotate-45 border-b-2 border-r-2 border-ink/80 bg-paper" />
-            </div>
-            {/* the buddy, sitting on the rug */}
-            <button
-              type="button"
-              onClick={() => {
-                setLineIdx(lineIdx + 1)
-                setBoop(boop + 1)
-              }}
-              className="absolute bottom-[5%] left-[41%] w-[27%] -translate-x-1/2 cursor-pointer"
-              aria-label={`Talk to ${b.name}`}
-            >
-              <div key={boop} className={boop ? 'anim-pop' : ''}>
-                <BuddySprite species={b.species} level={b.level} mood={m} hat={b.equipped_hat} size="fill" />
-              </div>
-            </button>
-          </RoomScene>
+          <CatRoom decor={decor} notesToday={doneToday} focusedToday={focusedToday} next={next} traits={traits} />
 
           <div className="flex flex-wrap items-center gap-x-8 gap-y-4 px-3 pb-2 pt-4">
             <div className="min-w-44 flex-1">
-              <div className="flex items-baseline gap-2">
+              <div className="flex flex-wrap items-baseline gap-x-2">
                 <h2 className="font-display text-2xl font-semibold">{b.name}</h2>
                 <span className="whitespace-nowrap text-sm font-bold text-ink/50">
                   {STAGE_NAMES[stage].toLowerCase()} · lv {b.level}
                 </span>
               </div>
+              <Link to="/memories" className="group mt-0.5 inline-flex items-center gap-1 font-hand text-xl text-accent hover:text-accent-dark">
+                {title ? `a ${title.toLowerCase()}` : 'still figuring out who they are'}
+                <Icon name="arrow" className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+              </Link>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-ink/[.07]">
                 <div className="h-full rounded-full bg-mustard transition-all duration-700" style={{ width: `${(b.xp / xpForLevel(b.level)) * 100}%` }} />
               </div>
@@ -130,11 +122,12 @@ export function HomePage() {
               <Meter icon="bulb" label="Smarts" value={b.knowledge} color="#6f63a6" />
             </div>
           </div>
+          <p className="px-3 pb-2 text-xs font-semibold text-ink/40">Tap {b.name} to pet them.</p>
         </section>
 
         <div className="space-y-6">
           <TodayCard plan={plan} tasksById={tasksById} now={now} focusedToday={focusedToday} />
-          <Shop />
+          <Shop earnedTraits={earned} preview={preview} onPreview={setPreview} />
         </div>
       </div>
     </div>
@@ -224,70 +217,3 @@ function TodayCard({ plan, tasksById, now, focusedToday }: { plan: Chunk[]; task
   )
 }
 
-function Shop() {
-  const { state, actions } = useData()
-  const b = state.buddy!
-  const [tab, setTab] = useState<'food' | 'hat'>('food')
-  const owned = new Set(state.inventory.map((i) => i.item_id))
-  const items = SHOP.filter((s) => s.kind === tab)
-
-  const click = (item: ShopItem) => {
-    const have = item.kind === 'hat' && owned.has(item.id)
-    if (have) actions.equipHat(b.equipped_hat === item.id ? null : item.id)
-    else actions.buy(item)
-  }
-
-  return (
-    <section className="card p-5">
-      <div className="mb-4 flex items-center gap-1">
-        {(['food', 'hat'] as const).map((k) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            className={`rounded-lg px-2.5 py-1 font-display text-lg font-semibold transition ${tab === k ? 'text-ink' : 'text-ink/35 hover:text-ink/60'}`}
-          >
-            {k === 'food' ? 'Snacks' : 'Closet'}
-          </button>
-        ))}
-        <span className="ml-auto flex items-center gap-1 text-sm font-extrabold">
-          <Coin /> {b.coins}
-        </span>
-      </div>
-
-      <div className="relative">
-        <div className={`grid gap-2 ${tab === 'food' ? 'grid-cols-4' : 'grid-cols-5'}`}>
-          {items.map((item) => {
-            const have = item.kind === 'hat' && owned.has(item.id)
-            const wearing = b.equipped_hat === item.id
-            const broke = !have && b.coins < item.price
-            const effect = item.effect ? [item.effect.energy && `+${item.effect.energy} energy`, item.effect.happiness && `+${item.effect.happiness} happy`].filter(Boolean).join(', ') : ''
-            return (
-              <button
-                key={item.id}
-                disabled={broke}
-                onClick={() => click(item)}
-                title={`${item.name}${effect ? `: ${effect}` : ''}`}
-                className="group flex flex-col items-center pb-1 disabled:cursor-not-allowed"
-              >
-                <span className={`text-3xl transition group-hover:-translate-y-1 ${broke ? 'opacity-35 grayscale' : ''} ${wearing ? 'drop-shadow-[0_0_6px_#dfa63b]' : ''}`}>{item.emoji}</span>
-                <span className={`mt-1.5 flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11px] font-extrabold ${wearing ? 'bg-mustard text-paper' : have ? 'bg-sage-soft text-ink/70' : 'bg-ink/[.05] text-ink/70'}`}>
-                  {have ? (wearing ? 'wearing' : 'wear') : (
-                    <>
-                      <Coin className="h-3 w-3" />
-                      {item.price}
-                    </>
-                  )}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-        {/* wooden shelf */}
-        <div className="mt-1 h-2.5 rounded-sm bg-wood shadow-[0_3px_0_#7d5434]" />
-      </div>
-      <p className="mt-3 text-xs font-semibold text-ink/45">
-        {tab === 'food' ? 'Snacks give energy and happiness right away.' : 'Hats are yours forever. Tap one you own to put it on or take it off.'}
-      </p>
-    </section>
-  )
-}

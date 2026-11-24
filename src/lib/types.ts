@@ -71,6 +71,8 @@ export interface Chunk {
   pinned: boolean
 }
 
+export type DecorSlot = 'wallpaper' | 'rug' | 'bed' | 'art' | 'plant' | 'lamp'
+
 export interface Buddy {
   id: string
   user_id?: string
@@ -83,6 +85,8 @@ export interface Buddy {
   happiness: number
   knowledge: number
   equipped_hat: string | null
+  /** what's placed in the room, by slot (wallpaper, rug, bed, art, plant, lamp) */
+  decor?: Partial<Record<DecorSlot, string>> | null
   last_decay_at: string
 }
 

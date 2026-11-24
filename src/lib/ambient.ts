@@ -135,3 +135,35 @@ export class AmbientPlayer {
     this.ctx = null
   }
 }
+
+/** A soft purr for petting: low rumbling noise pulsing about 24 times a second. */
+export function purr() {
+  try {
+    const ctx = new AudioContext()
+    const t = ctx.currentTime
+    const src = ctx.createBufferSource()
+    src.buffer = noiseBuffer(ctx, 'brown')
+    const lp = ctx.createBiquadFilter()
+    lp.type = 'lowpass'
+    lp.frequency.value = 260
+    const amp = ctx.createGain()
+    amp.gain.value = 0
+    const lfo = ctx.createOscillator()
+    lfo.frequency.value = 24
+    const depth = ctx.createGain()
+    depth.gain.value = 0.5
+    lfo.connect(depth).connect(amp.gain)
+    const env = ctx.createGain()
+    env.gain.setValueAtTime(0.0001, t)
+    env.gain.exponentialRampToValueAtTime(0.9, t + 0.15)
+    env.gain.exponentialRampToValueAtTime(0.0001, t + 1.3)
+    src.connect(lp).connect(amp).connect(env).connect(ctx.destination)
+    lfo.start(t)
+    src.start(t)
+    src.stop(t + 1.4)
+    lfo.stop(t + 1.4)
+    window.setTimeout(() => void ctx.close(), 1800)
+  } catch {
+    /* audio unavailable */
+  }
+}

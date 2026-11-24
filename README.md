@@ -39,7 +39,7 @@ How it works: the app registers each device in `push_subscriptions`. A Supabase 
 
 One-time setup:
 
-1. Run [004_reminders.sql](supabase/migrations/004_reminders.sql) and [005_service_role_grants.sql](supabase/migrations/005_service_role_grants.sql) in the SQL Editor.
+1. Run [004_reminders.sql](supabase/migrations/004_reminders.sql) and [005_service_role_grants.sql](supabase/migrations/005_service_role_grants.sql) in the SQL Editor (and [006_room_decor.sql](supabase/migrations/006_room_decor.sql) for room decorations).
 2. Generate keys (already done once; the private ones live in `supabase/functions/.env.reminders`, which git ignores). The public key is in `src/lib/pushConfig.ts`. To regenerate: `npx web-push generate-vapid-keys` and update both places.
 3. Set the function secrets: `npx supabase secrets set --env-file supabase/functions/.env.reminders --remote <ref> --yes`
 4. Deploy: `npx supabase functions deploy send-reminders --no-verify-jwt --use-api --remote=<ref>`

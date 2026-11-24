@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { Repo } from './repo'
 import { uid } from './repo'
 import type { Buddy, Category, Chunk, FocusSession, InventoryItem, Profile, RoomKey, SchoolBlock, Species, Task } from './types'
-import { normalizeSpecies } from './types'
+import { normalizeSpecies, type DecorSlot } from './types'
+import type { DecorItem } from './decor'
 import { track } from './analytics'
 import { schedule } from './scheduler'
 import {
@@ -463,6 +464,48 @@ function useStore(repo: Repo, userId: string) {
         if (!b) return
         commit({ buddy: { ...b, equipped_hat: itemId } })
         persist(() => repo.update('buddies', b.id, { equipped_hat: itemId }))
+      },
+
+      /** Put a decoration in its slot in the room. */
+      placeDecor(slot: DecorSlot, itemId: string) {
+        const b = ref.current.buddy
+        if (!b) return
+        const decor = { ...(b.decor ?? {}), [slot]: itemId }
+        commit({ buddy: { ...b, decor } })
+        persist(() => repo.update('buddies', b.id, { decor }))
+      },
+      /** Buy a decoration with coins and place it right away. */
+      buyDecor(item: DecorItem) {
+        const b = ref.current.buddy
+        if (!b || item.price == null || item.price <= 0 || b.coins < item.price) return
+        if (ref.current.inventory.some((i) => i.item_id === item.id)) return
+        const row = { id: uid(), item_id: item.id }
+        const coins = b.coins - item.price
+        const decor = { ...(b.decor ?? {}), [item.slot]: item.id }
+        commit({ inventory: [...ref.current.inventory, row], buddy: { ...b, coins, decor } })
+        persist(() => repo.insert('inventory', [row]))
+        persist(() => repo.update('buddies', b.id, { coins, decor }))
+        track('shop_purchase', { kind: 'decor', item: item.id })
+        toast(`${item.name} is in the room now. ${b.name} approves.`)
+      },
+      /** A little happiness for petting, a few times a day. Returns false once the daily pets are used up. */
+      pet(): boolean {
+        const b = ref.current.buddy
+        if (!b) return false
+        const key = `studybuddy:pets:${dateKey(new Date())}`
+        let count = 0
+        try {
+          count = Number(localStorage.getItem(key) ?? 0)
+          localStorage.setItem(key, String(count + 1))
+        } catch {
+          /* storage blocked: still purr, just no reward */
+          return false
+        }
+        if (count >= 5) return false
+        const happiness = Math.min(STAT_MAX, b.happiness + 2)
+        commit({ buddy: { ...b, happiness } })
+        persist(() => repo.update('buddies', b.id, { happiness }))
+        return true
       },
       renameBuddy(name: string) {
         const b = ref.current.buddy

@@ -11,6 +11,7 @@ import { TodosPage } from './features/tasks/TodosPage'
 import { RoomsPage } from './features/rooms/RoomsPage'
 import { RoomPage } from './features/rooms/RoomPage'
 import { SettingsPage } from './features/schedule/SettingsPage'
+import { MemoriesPage } from './features/buddy/MemoriesPage'
 
 function Routed() {
   const { state } = useData()
@@ -27,6 +28,7 @@ function Routed() {
         <Route path="rooms" element={<RoomsPage />} />
         <Route path="rooms/:room" element={<RoomPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="memories" element={<MemoriesPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

@@ -10,6 +10,8 @@ interface Props {
   /** pixels, or "fill" to stretch to the parent width */
   size?: number | 'fill'
   animate?: boolean
+  /** sit (default), loaf (curled up napping), or read (book between the paws) */
+  pose?: 'sit' | 'loaf' | 'read'
 }
 
 interface Coat {
@@ -76,7 +78,9 @@ export const COAT_STYLE: Record<Species, Coat> = {
 const STAGE_SCALE = [0.74, 0.86, 0.95, 1]
 
 /** Hand-drawn cats. Four growth stages (kitten → wise old cat) and four moods. */
-export function BuddySprite({ species, level, mood, hat, size = 200, animate = true }: Props) {
+export function BuddySprite({ species, level, mood, hat, size = 200, animate = true, pose = 'sit' }: Props) {
+  const loaf = pose === 'loaf'
+  const headDy = loaf ? 30 : 0
   const stage = evolutionStage(level)
   const c = COAT_STYLE[species] ?? COAT_STYLE.ginger
   const s = STAGE_SCALE[stage]
@@ -97,6 +101,24 @@ export function BuddySprite({ species, level, mood, hat, size = 200, animate = t
             </g>
           )}
 
+          {loaf ? (
+            /* curled-up loaf: wide low body, tail wrapped around the front */
+            <g>
+              <ellipse cx="100" cy="162" rx="64" ry="28" fill={c.fur} stroke={c.shade} strokeWidth="3" />
+              <ellipse cx="100" cy="170" rx="40" ry="14" fill={c.belly} opacity=".7" />
+              {c.stripes && (
+                <g stroke={c.shade} strokeWidth="3.5" strokeLinecap="round" fill="none">
+                  <path d="M52 152 q6 6 12 4" />
+                  <path d="M148 152 q-6 6 -12 4" />
+                </g>
+              )}
+              {species === 'calico' && <path d="M124 146 C 136 140, 152 148, 154 160 C 146 168, 132 166, 124 158 Z" fill="#df8a4f" />}
+              <path d="M160 168 C 170 186, 120 194, 70 186" stroke={c.shade} strokeWidth="15" fill="none" strokeLinecap="round" />
+              <path d="M160 168 C 170 186, 120 194, 70 186" stroke={c.fur} strokeWidth="9" fill="none" strokeLinecap="round" />
+              <path d="M78 187 C 74 187, 72 186, 70 186" stroke={c.tail ?? (c.stripes ? c.shade : c.fur)} strokeWidth="9" fill="none" strokeLinecap="round" />
+            </g>
+          ) : (
+          <>
           {/* tail */}
           <path d="M136 176 C 174 174, 182 136, 160 112" stroke={c.shade} strokeWidth="17" fill="none" strokeLinecap="round" />
           <path d="M136 176 C 174 174, 182 136, 160 112" stroke={c.fur} strokeWidth="11" fill="none" strokeLinecap="round" />
@@ -124,6 +146,22 @@ export function BuddySprite({ species, level, mood, hat, size = 200, animate = t
             </g>
           ))}
 
+          {/* an open book between the paws */}
+          {pose === 'read' && (
+            <g>
+              <path d="M100 168 Q 82 160 62 166 L 62 190 Q 82 184 100 192 Z" fill="#fffaf2" stroke="#b9a78e" strokeWidth="2" />
+              <path d="M100 168 Q 118 160 138 166 L 138 190 Q 118 184 100 192 Z" fill="#fffaf2" stroke="#b9a78e" strokeWidth="2" />
+              <path d="M70 172 q14 -3 24 1 M70 178 q14 -3 24 1 M106 173 q12 -4 24 -1 M106 179 q12 -4 24 -1" stroke="#cdbfa8" strokeWidth="1.6" fill="none" />
+              <path d="M62 190 Q 82 184 100 192 Q 118 184 138 190 L 138 194 Q 118 188 100 196 Q 82 188 62 194 Z" fill="#6f63a6" />
+              {[78, 122].map((x) => (
+                <ellipse key={x} cx={x} cy="190" rx="10" ry="6.5" fill={c.paws ?? c.belly} stroke={c.shade} strokeWidth="2.5" />
+              ))}
+            </g>
+          )}
+          </>
+          )}
+
+          <g transform={`translate(0 ${headDy})`}>
           {/* scarf for the final stage */}
           {stage === 3 && (
             <g>
@@ -199,6 +237,7 @@ export function BuddySprite({ species, level, mood, hat, size = 200, animate = t
               z<tspan dx="2" dy="-9" fontSize="14">z</tspan>
             </text>
           )}
+          </g>
         </g>
       </g>
     </svg>
