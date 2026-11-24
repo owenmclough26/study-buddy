@@ -18,6 +18,25 @@ Open http://localhost:5173. Without Supabase keys the app runs in **guest mode**
 3. Go to **Project Settings → API**. Copy `.env.example` to `.env.local` and fill in the Project URL and the `anon` public key.
 4. Restart `npm run dev`. You'll now see a sign-in screen, and your data follows your account.
 
+## Put it online (Vercel)
+
+1. Push this repo to GitHub (a private repo is fine).
+2. At https://vercel.com, sign in with GitHub, click **Add New → Project**, and import the repo. Vercel detects Vite; `vercel.json` handles the rest.
+3. Under **Environment Variables**, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (same values as `.env.local`), plus the PostHog ones if you use analytics. Then **Deploy**.
+4. In Supabase, go to **Authentication → URL Configuration**. Set **Site URL** to your Vercel address (e.g. `https://study-buddy.vercel.app`) and add it under **Redirect URLs**, so confirmation emails link to the live site instead of localhost.
+
+Every push to GitHub redeploys automatically.
+
+## Install on a phone
+
+The site is a PWA. On iPhone: open it in Safari → Share → **Add to Home Screen**. On Android: Chrome menu → **Install app**. It opens full-screen with a bottom tab bar, and the app shell works offline.
+
+## Analytics (optional)
+
+Create a free project at https://posthog.com, then set `VITE_POSTHOG_KEY` (and `VITE_POSTHOG_HOST` if you're on the EU region). With no key, analytics is off. It only records a few named events (`task_added`, `focus_session_saved`, `buddy_adopted`, ...) with numbers and fixed labels: no autocapture, no recordings, no emails, no task names. Use PostHog's **Retention** insight on `app_opened` to see if people come back.
+
+To regenerate the app icons after changing `public/favicon.svg`: `node scripts/make-icons.mjs`.
+
 ## Scripts
 
 | Command | What it does |

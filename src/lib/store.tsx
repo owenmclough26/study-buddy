@@ -3,6 +3,7 @@ import type { Repo } from './repo'
 import { uid } from './repo'
 import type { Buddy, Category, Chunk, FocusSession, InventoryItem, Profile, RoomKey, SchoolBlock, Species, Task } from './types'
 import { normalizeSpecies } from './types'
+import { track } from './analytics'
 import { schedule } from './scheduler'
 import {
   applyReward,
@@ -270,6 +271,7 @@ function useStore(repo: Repo, userId: string) {
       const streak = touchStreak()
       patchTask(id, { status: 'done', completed_at: new Date().toISOString() })
       const r = completionReward(t, streak)
+      track('task_completed', { category: t.category, on_time: Date.now() <= new Date(t.due_at).getTime(), minutes: t.estimated_minutes })
       rewardBuddy(r)
       toast(`Done! +${r.xp} xp and ${r.coins} coins`)
       replan()
@@ -293,6 +295,7 @@ function useStore(repo: Repo, userId: string) {
         const rows = blocks.map((b) => ({ id: uid(), ...b }))
         commit({ blocks: [...ref.current.blocks, ...rows] })
         persist(() => repo.insert('school_blocks', rows))
+        track('schedule_block_added', { days: rows.length })
         replan()
       },
       updateBlock(id: string, patch: Partial<SchoolBlock>) {
@@ -332,6 +335,7 @@ function useStore(repo: Repo, userId: string) {
         }
         commit({ tasks: [...ref.current.tasks, row] })
         persist(() => repo.insert('tasks', [row]))
+        track('task_added', { category: row.category, minutes: row.estimated_minutes, important: row.priority === 3 })
         replan()
       },
       updateTask(id: string, patch: Partial<Task>) {
@@ -395,6 +399,7 @@ function useStore(repo: Repo, userId: string) {
         persist(() => repo.update('profiles', p.id, { relax_minutes_banked: banked }))
 
         const r = focusReward(minutes, streak)
+        track('focus_session_saved', { room, minutes })
         rewardBuddy(r)
 
         if (chunkId) patchChunk(chunkId, { status: 'done' })
@@ -424,6 +429,7 @@ function useStore(repo: Repo, userId: string) {
         }
         commit({ buddy: b })
         persist(() => repo.insert('buddies', [b]))
+        track('buddy_adopted', { coat: species })
       },
       buy(item: ShopItem) {
         const b = ref.current.buddy
@@ -433,12 +439,14 @@ function useStore(repo: Repo, userId: string) {
           commit({ buddy: { ...b, ...next } })
           persist(() => repo.update('buddies', b.id, next))
           toast(`${item.emoji} ${b.name} loved the ${item.name.toLowerCase()}!`)
+          track('shop_purchase', { kind: 'food', item: item.id })
         } else {
           if (ref.current.inventory.some((i) => i.item_id === item.id)) return
           const row = { id: uid(), item_id: item.id }
           const coins = b.coins - item.price
           commit({ inventory: [...ref.current.inventory, row], buddy: { ...b, coins, equipped_hat: item.id } })
           persist(() => repo.insert('inventory', [row]))
+          track('shop_purchase', { kind: 'hat', item: item.id })
           persist(() => repo.update('buddies', b.id, { coins, equipped_hat: item.id }))
           toast(`New ${item.name.toLowerCase()}! It looks great.`)
         }
@@ -460,6 +468,7 @@ function useStore(repo: Repo, userId: string) {
         if (!b) return
         commit({ buddy: { ...b, species } })
         persist(() => repo.update('buddies', b.id, { species }))
+        track('coat_changed', { coat: species })
       },
 
       /** Spend banked focus minutes on a screen-free break. */
@@ -478,6 +487,7 @@ function useStore(repo: Repo, userId: string) {
           persist(() => repo.update('buddies', b.id, next))
         }
         toast('Welcome back. Your buddy feels refreshed too.')
+        track('relax_break_taken', { minutes })
       },
     }
   }, [commit, patchChunk, patchTask, persist, replan, repo, rewardBuddy, toast, touchStreak])
