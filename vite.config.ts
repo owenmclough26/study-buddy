@@ -31,6 +31,8 @@ export default defineConfig({
       workbox: {
         // app shell is cached; every route falls back to it so deep links work offline
         navigateFallback: '/index.html',
+        // notification handlers live in public/push-sw.js
+        importScripts: ['push-sw.js'],
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // the analytics library is only fetched when analytics is on; don't make every user download it
         globIgnores: ['**/module-*.js', '**/posthog*.js'],

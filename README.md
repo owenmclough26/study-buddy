@@ -31,6 +31,20 @@ Every push to GitHub redeploys automatically.
 
 The site is a PWA. On iPhone: open it in Safari → Share → **Add to Home Screen**. On Android: Chrome menu → **Install app**. It opens full-screen with a bottom tab bar, and the app shell works offline.
 
+## Reminders (push notifications)
+
+Phones get a notification before each planned session, plus an 8pm heads-up about tomorrow. Users turn it on in **Settings → Reminders**. On iPhone it only works in the installed app (iOS 16.4+).
+
+How it works: the app registers each device in `push_subscriptions`. A Supabase cron job calls the `send-reminders` Edge Function every minute; the function finds sessions starting within each user's lead time and sends Web Push messages. `public/push-sw.js` shows them and opens the right room when tapped.
+
+One-time setup:
+
+1. Run [supabase/migrations/004_reminders.sql](supabase/migrations/004_reminders.sql) in the SQL Editor.
+2. Generate keys (already done once; the private ones live in `supabase/functions/.env.reminders`, which git ignores). The public key is in `src/lib/pushConfig.ts`. To regenerate: `npx web-push generate-vapid-keys` and update both places.
+3. Set the function secrets: `npx supabase secrets set --env-file supabase/functions/.env.reminders --project-ref <ref>`
+4. Deploy: `npx supabase functions deploy send-reminders --no-verify-jwt --project-ref <ref>`
+5. Schedule it: paste `supabase/reminders-cron.local.sql` (generated, git-ignored; template in `supabase/reminders-cron.template.sql`) into the SQL Editor.
+
 ## Analytics (optional)
 
 Create a free project at https://posthog.com, then set `VITE_POSTHOG_KEY` (and `VITE_POSTHOG_HOST` if you're on the EU region). With no key, analytics is off. It only records a few named events (`task_added`, `focus_session_saved`, `buddy_adopted`, ...) with numbers and fixed labels: no autocapture, no recordings, no emails, no task names. Use PostHog's **Retention** insight on `app_opened` to see if people come back.

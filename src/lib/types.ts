@@ -29,6 +29,11 @@ export interface Profile {
   streak: number
   last_active_date: string | null // 'YYYY-MM-DD'
   relax_minutes_banked: number
+  // reminders (optional so older local data still loads)
+  reminders_enabled?: boolean
+  remind_minutes_before?: number
+  nightly_summary?: boolean
+  timezone?: string
 }
 
 export interface SchoolBlock {

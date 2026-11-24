@@ -3,6 +3,7 @@ import { COATS } from '../../lib/types'
 import { BuddySprite } from '../buddy/BuddySprite'
 import { useData } from '../../lib/store'
 import { ScheduleBuilder } from './ScheduleBuilder'
+import { RemindersCard } from './RemindersCard'
 
 export function SettingsPage() {
   const { state, actions } = useData()
@@ -49,6 +50,8 @@ export function SettingsPage() {
         </div>
         <p className="mt-3 text-xs text-ink/45">Long tasks get split into sessions of this length, with a 10-minute break between them.</p>
       </section>
+
+      <RemindersCard />
 
       <section className="card p-5">
         <h2 className="mb-4 font-display text-xl font-semibold">Buddy</h2>

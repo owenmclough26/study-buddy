@@ -204,6 +204,13 @@ function useStore(repo: Repo, userId: string) {
           buddy = { ...buddy, ...d, species: normalizeSpecies(buddy.species) }
           persist(() => repo.update('buddies', buddy.id, d))
         }
+        // reminders are sent in the user's own time zone; keep it current if they travel
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+        if (profile.reminders_enabled && tz && profile.timezone !== tz) {
+          profile = { ...profile, timezone: tz }
+          const pid = profile.id
+          persist(() => repo.update('profiles', pid, { timezone: tz }))
+        }
         commit({ loading: false, profile, blocks, tasks, chunks, buddy, sessions, inventory })
         markMissed()
         replan()
