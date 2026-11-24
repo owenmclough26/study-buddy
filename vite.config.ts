@@ -19,7 +19,7 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        orientation: 'portrait',
+        orientation: 'any', // portrait for the app, sideways for focus mode
         background_color: '#f3eadc',
         theme_color: '#f3eadc',
         icons: [

@@ -88,3 +88,10 @@ body {
   background-image: linear-gradient(to bottom, transparent 43px, var(--color-line) 43px, var(--color-line) 44px);
   background-size: 100% 44px;
 }
+
+/* Phones zoom the whole page in when you tap a text box smaller than 16px (that was the
+   "zoomed in after logging in" bug). Touch screens get 16px form fields. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+@media (pointer: coarse) {
+  input, select, textarea { font-size: 16px !important; }
+}
