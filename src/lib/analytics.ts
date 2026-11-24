@@ -39,6 +39,13 @@ export function initAnalytics() {
         capture_pageview: false,
         capture_pageleave: false,
         disable_session_recording: true,
+        // the project's own settings can switch these on remotely; keep them off (they can record what was clicked)
+        capture_dead_clicks: false,
+        capture_heatmaps: false,
+        rageclick: false,
+        capture_performance: false,
+        capture_exceptions: false,
+        disable_surveys: true,
         person_profiles: 'identified_only',
         persistence: 'localStorage',
         ip: false,
