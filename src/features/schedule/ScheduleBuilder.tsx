@@ -14,6 +14,24 @@ export function ScheduleBuilder() {
   const [color, setColor] = useState(COLORS[6])
   const [err, setErr] = useState<string | null>(null)
   const [copyTo, setCopyTo] = useState<number[]>([])
+  /** which days the new class goes on; follows the selected tab until you change it */
+  const [days, setDays] = useState<number[]>([1])
+
+  const pickDay = (wd: number) => {
+    setDay(wd)
+    setDays([wd])
+    setErr(null)
+  }
+  const toggleDay = (wd: number) => setDays(days.includes(wd) ? days.filter((d) => d !== wd) : [...days, wd])
+  const setPreset = (preset: number[]) => setDays(preset)
+  const WEEKDAYS_ONLY = [1, 2, 3, 4, 5]
+  const sameSet = (a: number[], b: number[]) => a.length === b.length && a.every((x) => b.includes(x))
+  const dayList = WEEKDAY_ORDER.filter((d) => days.includes(d))
+  const dayLabel = sameSet(days, WEEKDAYS_ONLY)
+    ? 'every weekday'
+    : dayList.length === 1
+      ? WEEKDAYS[dayList[0]]
+      : `${dayList.length} days`
 
   const blocks = state.blocks
     .filter((b) => b.weekday === day)
@@ -21,11 +39,21 @@ export function ScheduleBuilder() {
 
   function add(e: FormEvent) {
     e.preventDefault()
+    if (!days.length) return setErr('Pick at least one day.')
     if (hmToMinutes(end) <= hmToMinutes(start)) return setErr('End time must be after start time.')
-    const overlap = blocks.find((b) => hmToMinutes(start) < hmToMinutes(b.end_time) && hmToMinutes(end) > hmToMinutes(b.start_time))
-    if (overlap) return setErr(`Overlaps with ${overlap.title}.`)
+    const clashes = dayList
+      .map((wd) => {
+        const hit = state.blocks.find(
+          (b) => b.weekday === wd && hmToMinutes(start) < hmToMinutes(b.end_time) && hmToMinutes(end) > hmToMinutes(b.start_time),
+        )
+        return hit ? `${WEEKDAYS[wd].slice(0, 3)} (${hit.title})` : null
+      })
+      .filter(Boolean)
+    if (clashes.length) return setErr(`That time overlaps on ${clashes.join(', ')}.`)
     setErr(null)
-    actions.addBlock({ weekday: day, title: title.trim() || 'Class', start_time: start, end_time: end, location: location.trim() || null, color })
+    const base = { title: title.trim() || 'Class', start_time: start, end_time: end, location: location.trim() || null, color }
+    actions.addBlocks(dayList.map((wd) => ({ ...base, weekday: wd })))
+    if (dayList.length > 1) actions.toast(`Added ${base.title} to ${dayLabel}`)
     setTitle('')
     setLocation('')
     setStart(end)
@@ -40,7 +68,7 @@ export function ScheduleBuilder() {
           return (
             <button
               key={wd}
-              onClick={() => setDay(wd)}
+              onClick={() => pickDay(wd)}
               className={`rounded-xl px-3 py-1.5 text-sm font-bold ${day === wd ? 'bg-accent text-white' : 'bg-ink/5 hover:bg-ink/10'}`}
             >
               {WEEKDAYS[wd].slice(0, 3)}
@@ -142,8 +170,33 @@ export function ScheduleBuilder() {
               ))}
             </div>
           </div>
+          <div>
+            <span className="label">Days</span>
+            <div className="flex flex-wrap gap-1">
+              {WEEKDAY_ORDER.map((wd) => (
+                <button
+                  type="button"
+                  key={wd}
+                  onClick={() => toggleDay(wd)}
+                  aria-pressed={days.includes(wd)}
+                  className={`h-9 w-9 rounded-lg text-xs font-extrabold transition ${days.includes(wd) ? 'bg-ink text-paper' : 'bg-paper text-ink/55 ring-[1.5px] ring-line hover:text-ink'}`}
+                  title={WEEKDAYS[wd]}
+                >
+                  {WEEKDAYS[wd].slice(0, 2)}
+                </button>
+              ))}
+            </div>
+            <div className="mt-1.5 flex gap-3 text-xs font-bold">
+              <button type="button" className="text-accent hover:text-accent-dark" onClick={() => setPreset(WEEKDAYS_ONLY)}>Mon–Fri</button>
+              <button type="button" className="text-accent hover:text-accent-dark" onClick={() => setPreset([1, 3, 5])}>Mon/Wed/Fri</button>
+              <button type="button" className="text-accent hover:text-accent-dark" onClick={() => setPreset([2, 4])}>Tue/Thu</button>
+              <button type="button" className="text-ink/40 hover:text-ink" onClick={() => setPreset([day])}>Just {WEEKDAYS[day].slice(0, 3)}</button>
+            </div>
+          </div>
           {err && <p className="text-sm font-semibold text-accent-dark">{err}</p>}
-          <button className="btn-primary w-full">Add to {WEEKDAYS[day]}</button>
+          <button className="btn-primary w-full" disabled={!days.length}>
+            Add to {dayLabel}
+          </button>
         </form>
       </div>
     </div>

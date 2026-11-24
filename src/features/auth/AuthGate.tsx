@@ -43,7 +43,7 @@ function LoginPage() {
     <div className="grid min-h-full place-items-center bg-gradient-to-br from-accent-soft via-cream to-mustard-soft p-4">
       <form onSubmit={submit} className="card w-full max-w-sm space-y-4 p-6">
         <div className="flex flex-col items-center gap-1">
-          <BuddySprite species="blob" level={6} mood="happy" size={110} />
+          <BuddySprite species="ginger" level={6} mood="happy" size={110} />
           <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Study Buddy</h1>
           <p className="text-sm text-ink/50">Your schedule, your to-dos, your buddy.</p>
         </div>

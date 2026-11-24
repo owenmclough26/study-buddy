@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { Repo } from './repo'
 import { uid } from './repo'
 import type { Buddy, Category, Chunk, FocusSession, InventoryItem, Profile, RoomKey, SchoolBlock, Species, Task } from './types'
+import { normalizeSpecies } from './types'
 import { schedule } from './scheduler'
 import {
   applyReward,
@@ -198,7 +199,8 @@ function useStore(repo: Repo, userId: string) {
         let buddy = buddies[0] ?? null
         if (buddy) {
           const d = decay(buddy, new Date())
-          buddy = { ...buddy, ...d }
+          // older buddies were blobs/dragons; everyone is a cat now
+          buddy = { ...buddy, ...d, species: normalizeSpecies(buddy.species) }
           persist(() => repo.update('buddies', buddy.id, d))
         }
         commit({ loading: false, profile, blocks, tasks, chunks, buddy, sessions, inventory })
@@ -285,10 +287,12 @@ function useStore(repo: Repo, userId: string) {
       },
 
       // School schedule
-      addBlock(b: Omit<SchoolBlock, 'id'>) {
-        const row = { id: uid(), ...b }
-        commit({ blocks: [...ref.current.blocks, row] })
-        persist(() => repo.insert('school_blocks', [row]))
+      /** Add one or more blocks (e.g. the same class on several days) in a single save. */
+      addBlocks(blocks: Omit<SchoolBlock, 'id'>[]) {
+        if (!blocks.length) return
+        const rows = blocks.map((b) => ({ id: uid(), ...b }))
+        commit({ blocks: [...ref.current.blocks, ...rows] })
+        persist(() => repo.insert('school_blocks', rows))
         replan()
       },
       updateBlock(id: string, patch: Partial<SchoolBlock>) {
@@ -450,6 +454,12 @@ function useStore(repo: Repo, userId: string) {
         if (!b) return
         commit({ buddy: { ...b, name } })
         persist(() => repo.update('buddies', b.id, { name }))
+      },
+      setCoat(species: Species) {
+        const b = ref.current.buddy
+        if (!b) return
+        commit({ buddy: { ...b, species } })
+        persist(() => repo.update('buddies', b.id, { species }))
       },
 
       /** Spend banked focus minutes on a screen-free break. */

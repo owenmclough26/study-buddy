@@ -5,44 +5,34 @@ import { addDays, atMinutes, startOfDay } from '../../lib/time'
 import { usePersisted } from '../../components/usePersisted'
 import type { RoomTheme } from './RoomShell'
 
-const Stars = () => (
-  <div className="pointer-events-none absolute inset-0 overflow-hidden">
-    {Array.from({ length: 40 }, (_, i) => (
-      <span
-        key={i}
-        className="absolute rounded-full bg-paper"
-        style={{
-          left: `${(i * 37) % 100}%`,
-          top: `${(i * 53) % 70}%`,
-          width: (i % 3) + 1,
-          height: (i % 3) + 1,
-          opacity: 0.25 + (i % 5) * 0.12,
-        }}
-      />
-    ))}
-    <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-amber-200/20 blur-3xl" />
-  </div>
-)
+import { ChoresScene, HomeworkScene, ReadingScene, StudyScene } from './scenes'
+
+/** Night rooms get a soft dark wash, day rooms a cream one, so text stays readable over the art. */
+const NIGHT_WASH = 'linear-gradient(180deg, rgb(22 20 38 / .55) 0%, rgb(22 20 38 / .3) 55%, rgb(22 20 38 / .5) 100%)'
+const DAY_WASH = 'linear-gradient(180deg, rgb(255 250 242 / .62) 0%, rgb(255 250 242 / .38) 55%, rgb(255 250 242 / .6) 100%)'
 
 export const THEMES: Record<string, RoomTheme> = {
   study: {
     key: 'study',
     title: 'Study Room',
-    tagline: 'Phone away. One thing at a time. Lock in.',
+    tagline: 'Late night, lamp on. One thing at a time.',
     icon: 'study',
-    bg: 'linear-gradient(160deg, #1e1b4b 0%, #312e81 55%, #4c1d95 100%)',
+    bg: '#3a4263',
+    scene: <StudyScene />,
+    wash: NIGHT_WASH,
     dark: true,
     defaultGoal: 45,
     defaultSound: 'rain',
     pomodoro: true,
-    decor: <Stars />,
   },
   homework: {
     key: 'homework',
     title: 'Homework & Writing',
     tagline: 'Break it into steps, then knock them out.',
     icon: 'homework',
-    bg: '#f0f9ff linear-gradient(#0ea5e910 1px, transparent 1px) 0 0 / 100% 28px',
+    bg: '#e7ecea',
+    scene: <HomeworkScene />,
+    wash: DAY_WASH,
     dark: false,
     defaultGoal: 45,
     defaultSound: 'brown',
@@ -51,20 +41,23 @@ export const THEMES: Record<string, RoomTheme> = {
   reading: {
     key: 'reading',
     title: 'Reading Nook',
-    tagline: 'Cozy up. Turn the pages.',
+    tagline: 'Armchair, fireplace, a good book.',
     icon: 'reading',
-    bg: 'linear-gradient(170deg, #451a03 0%, #78350f 60%, #92400e 100%)',
+    bg: '#6e4532',
+    scene: <ReadingScene />,
+    wash: NIGHT_WASH,
     dark: true,
     defaultGoal: 30,
     defaultSound: 'fire',
-    decor: <div className="pointer-events-none absolute -bottom-32 left-1/3 h-80 w-80 rounded-full bg-orange-400/25 blur-3xl" />,
   },
   chores: {
     key: 'chores',
     title: 'Quick Tasks',
     tagline: 'Small stuff, fast. Check, check, check.',
     icon: 'chores',
-    bg: 'linear-gradient(160deg, #f2f1e4 0%, #dde8d2 100%)',
+    bg: '#dfe6d3',
+    scene: <ChoresScene />,
+    wash: DAY_WASH,
     dark: false,
     defaultGoal: 15,
     defaultSound: 'off',

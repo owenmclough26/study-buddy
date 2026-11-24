@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { COATS } from '../../lib/types'
+import { BuddySprite } from '../buddy/BuddySprite'
 import { useData } from '../../lib/store'
 import { ScheduleBuilder } from './ScheduleBuilder'
 
@@ -63,6 +65,22 @@ export function SettingsPage() {
           <input aria-label="Buddy name" className="input" value={name} maxLength={20} onChange={(e) => setName(e.target.value)} />
           <button className="btn-primary">Rename</button>
         </form>
+        <div className="mt-5">
+          <span className="label">Coat</span>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+            {COATS.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => actions.setCoat(c.key)}
+                aria-pressed={b.species === c.key}
+                className={`flex flex-col items-center rounded-xl pb-2 transition ${b.species === c.key ? 'bg-accent-soft ring-2 ring-accent' : 'hover:bg-ink/[.04]'}`}
+              >
+                <BuddySprite species={c.key} level={b.level} mood="neutral" size={76} animate={false} />
+                <span className="text-xs font-bold">{c.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
     </div>
   )

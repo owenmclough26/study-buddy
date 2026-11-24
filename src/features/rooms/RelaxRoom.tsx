@@ -4,6 +4,7 @@ import { useData } from '../../lib/store'
 import { RELAX_BREAK_MIN, RELAX_COST_MIN } from '../../lib/rewards'
 import { BuddySprite } from '../buddy/BuddySprite'
 import { Icon } from '../../components/Icon'
+import { RelaxScene } from './scenes'
 
 const IDEAS = ['Go outside for a few minutes', 'Stretch, then grab some water', 'Talk to someone in person', 'Look out a window at something far away', 'Have a snack away from your desk', 'Put on a song and move around']
 
@@ -32,7 +33,9 @@ export function RelaxRoom() {
   }, [phase, actions])
 
   return (
-    <div className="relative grid min-h-[78vh] place-items-center overflow-hidden rounded-3xl p-6 text-center text-white" style={{ background: 'linear-gradient(170deg, #24473a 0%, #3f6e52 55%, #6f9a6d 100%)' }}>
+    <div className="relative grid min-h-[78vh] place-items-center overflow-hidden rounded-3xl p-6 text-center text-paper" style={{ background: '#a9c18f' }}>
+      <RelaxScene />
+      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(ellipse 45% 55% at center, rgb(36 56 44 / .6) 0%, rgb(36 56 44 / .25) 65%, rgb(36 56 44 / 0) 100%)' }} />
       <div className="pointer-events-none absolute inset-0 grid place-items-center">
         <div className="anim-breathe h-[28rem] w-[28rem] rounded-full bg-white/10" />
       </div>
@@ -44,7 +47,7 @@ export function RelaxRoom() {
         {!ready && phase === 'intro' && (
           <>
             <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">Relax Room</h1>
-            <p className="mt-2 text-white/80">Breaks here are earned. Focus for {RELAX_COST_MIN} minutes in any room to unlock one.</p>
+            <p className="mt-2 text-paper/80">Breaks here are earned. Focus for {RELAX_COST_MIN} minutes in any room to unlock one.</p>
             <div className="mx-auto mt-5 h-3 max-w-xs overflow-hidden rounded-full bg-white/15">
               <div className="h-full rounded-full bg-paper" style={{ width: `${(p.relax_minutes_banked / RELAX_COST_MIN) * 100}%` }} />
             </div>
@@ -56,8 +59,8 @@ export function RelaxRoom() {
         {ready && phase === 'intro' && (
           <>
             <h1 className="mt-2 font-display text-5xl font-semibold leading-tight tracking-tight">Get off your computer.<br />You earned it.</h1>
-            <p className="mt-3 text-lg text-white/85">Take {RELAX_BREAK_MIN} minutes away from the screen. {b.name} will wait right here.</p>
-            <p className="mt-4 font-hand text-2xl text-white/80">idea: {idea.toLowerCase()}</p>
+            <p className="mt-3 text-lg text-paper/85">Take {RELAX_BREAK_MIN} minutes away from the screen. {b.name} will wait right here.</p>
+            <p className="mt-4 font-hand text-2xl text-paper/80">idea: {idea.toLowerCase()}</p>
             <button
               className="btn mt-6 bg-paper px-6 py-3 text-base text-[#24473a]"
               onClick={() => {
@@ -77,14 +80,14 @@ export function RelaxRoom() {
             <div className="mt-3 font-display text-8xl font-semibold tabular-nums tracking-tight">
               {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
             </div>
-            <p className="mt-3 text-white/80">Breathe in as the circle grows, out as it shrinks. Or better, don't look at this at all.</p>
+            <p className="mt-3 text-paper/80">Breathe in as the circle grows, out as it shrinks. Or better, don't look at this at all.</p>
           </>
         )}
 
         {phase === 'back' && (
           <>
             <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">Welcome back</h1>
-            <p className="mt-2 text-white/85">{b.name} feels refreshed too (+happiness, +energy).</p>
+            <p className="mt-2 text-paper/85">{b.name} feels refreshed too (+happiness, +energy).</p>
             <Link to="/" className="btn mt-6 bg-paper text-[#24473a]">Back to Home</Link>
           </>
         )}

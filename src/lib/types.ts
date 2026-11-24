@@ -1,6 +1,23 @@
 export type Category = 'study' | 'homework' | 'reading' | 'chores'
 export type RoomKey = Category | 'relax'
-export type Species = 'blob' | 'cat' | 'dragon'
+/** Every buddy is a cat. This is their coat. (Stored in the `species` column.) */
+export type Species = 'ginger' | 'gray' | 'black' | 'calico' | 'tuxedo' | 'cream'
+
+export const COATS: { key: Species; name: string; blurb: string }[] = [
+  { key: 'ginger', name: 'Ginger', blurb: 'Orange tabby. Sunny, a little dramatic.' },
+  { key: 'gray', name: 'Smoky', blurb: 'Silver tabby. Calm and thoughtful.' },
+  { key: 'black', name: 'Midnight', blurb: 'Black cat with golden eyes. Night-owl energy.' },
+  { key: 'calico', name: 'Calico', blurb: 'Patchwork coat. Curious about everything.' },
+  { key: 'tuxedo', name: 'Tux', blurb: 'Always dressed for the occasion.' },
+  { key: 'cream', name: 'Latte', blurb: 'Cream with cocoa points and blue eyes.' },
+]
+
+/** Buddies made before everyone became a cat. */
+const LEGACY: Record<string, Species> = { blob: 'gray', cat: 'ginger', dragon: 'black' }
+export function normalizeSpecies(s: string): Species {
+  if (COATS.some((c) => c.key === s)) return s as Species
+  return LEGACY[s] ?? 'ginger'
+}
 
 export interface Profile {
   id: string

@@ -19,7 +19,9 @@ export interface RoomTheme {
   defaultGoal: number
   defaultSound: Ambient
   pomodoro?: boolean
-  decor?: ReactNode
+  /** illustrated backdrop + a wash over it so text stays readable */
+  scene: ReactNode
+  wash: string
 }
 
 const POMO_FOCUS = 25 * 60
@@ -178,9 +180,9 @@ export function RoomShell({ theme, children }: { theme: RoomTheme; children?: (t
   }
 
   const b = state.buddy!
-  const text = theme.dark ? 'text-white' : 'text-ink'
-  const sub = theme.dark ? 'text-white/65' : 'text-ink/55'
-  const panel = theme.dark ? 'bg-white/10 ring-white/15' : 'bg-white/70 ring-ink/5'
+  const text = theme.dark ? 'text-paper' : 'text-ink'
+  const sub = theme.dark ? 'text-paper/70' : 'text-ink/60'
+  const panel = theme.dark ? 'bg-[rgb(24_20_36/.45)] ring-white/15 backdrop-blur-md' : 'bg-paper/80 ring-line backdrop-blur-md'
   const remaining = goal * 60 - focusSec
   const pct = Math.min(100, (focusSec / (goal * 60)) * 100)
 
@@ -189,7 +191,8 @@ export function RoomShell({ theme, children }: { theme: RoomTheme; children?: (t
       className={`${focusMode ? 'fixed inset-0 z-[60] rounded-none' : 'relative min-h-[78vh] rounded-3xl'} overflow-hidden ${text}`}
       style={{ background: theme.bg }}
     >
-      {theme.decor}
+      {theme.scene}
+      <div className="pointer-events-none absolute inset-0" style={{ background: theme.wash }} />
       <div className="relative flex h-full flex-col p-5 sm:p-8">
         {!focusMode && (
           <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -245,7 +248,11 @@ export function RoomShell({ theme, children }: { theme: RoomTheme; children?: (t
             </div>
 
             {/* timer ring */}
-            <div className="relative grid h-64 w-64 place-items-center sm:h-72 sm:w-72">
+            <div
+              className={`relative grid h-64 w-64 place-items-center rounded-full backdrop-blur-md sm:h-72 sm:w-72 ${
+                theme.dark ? 'bg-[rgb(24_20_36/.35)]' : 'bg-paper/70'
+              }`}
+            >
               <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90">
                 <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeOpacity=".12" strokeWidth="4" />
                 <circle

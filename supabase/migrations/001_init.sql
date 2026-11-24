@@ -55,7 +55,7 @@ create table if not exists public.scheduled_chunks (
 create table if not exists public.buddies (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null unique default auth.uid() references auth.users (id) on delete cascade,
-  species text not null check (species in ('blob', 'cat', 'dragon')),
+  species text not null check (species in ('ginger', 'gray', 'black', 'calico', 'tuxedo', 'cream')),
   name text not null,
   level int not null default 1,
   xp int not null default 0,

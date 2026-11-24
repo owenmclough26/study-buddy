@@ -14,7 +14,7 @@ Open http://localhost:5173. Without Supabase keys the app runs in **guest mode**
 ## Turn on accounts + sync (Supabase)
 
 1. Create a free project at https://supabase.com.
-2. In the dashboard, go to **SQL Editor → New query**, paste [supabase/migrations/001_init.sql](supabase/migrations/001_init.sql), and click **Run**. Then do the same with [supabase/migrations/002_grants.sql](supabase/migrations/002_grants.sql).
+2. In the dashboard, go to **SQL Editor → New query**, paste [supabase/migrations/001_init.sql](supabase/migrations/001_init.sql), and click **Run**. Then do the same with [002_grants.sql](supabase/migrations/002_grants.sql) and [003_cat_coats.sql](supabase/migrations/003_cat_coats.sql).
 3. Go to **Project Settings → API**. Copy `.env.example` to `.env.local` and fill in the Project URL and the `anon` public key.
 4. Restart `npm run dev`. You'll now see a sign-in screen, and your data follows your account.
 

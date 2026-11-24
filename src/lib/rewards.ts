@@ -1,4 +1,4 @@
-import type { Buddy, Species, Task } from './types'
+import type { Buddy, Task } from './types'
 
 export const STAT_FLOOR = 10 // the buddy gets sad, never dies
 export const STAT_MAX = 100
@@ -30,11 +30,8 @@ export function evolutionStage(level: number): 0 | 1 | 2 | 3 {
   return 0
 }
 
-export const STAGE_NAMES: Record<Species, string[]> = {
-  blob: ['Droplet', 'Blob', 'Big Blob', 'Royal Blob'],
-  cat: ['Kitten', 'Cat', 'Scholar Cat', 'Sage Cat'],
-  dragon: ['Egg', 'Hatchling', 'Drake', 'Elder Dragon'],
-}
+/** Every coat grows the same way: kitten → cat → scholar (glasses) → wise old cat (scarf). */
+export const STAGE_NAMES = ['Kitten', 'Cat', 'Scholar Cat', 'Wise Old Cat']
 
 export type Mood = 'happy' | 'neutral' | 'tired' | 'sad'
 

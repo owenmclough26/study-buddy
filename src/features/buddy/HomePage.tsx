@@ -113,7 +113,7 @@ export function HomePage() {
               <div className="flex items-baseline gap-2">
                 <h2 className="font-display text-2xl font-semibold">{b.name}</h2>
                 <span className="whitespace-nowrap text-sm font-bold text-ink/50">
-                  {STAGE_NAMES[b.species][stage].toLowerCase()} · lv {b.level}
+                  {STAGE_NAMES[stage].toLowerCase()} · lv {b.level}
                 </span>
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-ink/[.07]">
@@ -121,7 +121,7 @@ export function HomePage() {
               </div>
               <div className="mt-1 text-xs font-semibold text-ink/50">
                 {xpForLevel(b.level) - b.xp} xp to level {b.level + 1}
-                {stage < 3 && ` · grows into a ${STAGE_NAMES[b.species][stage + 1].toLowerCase()} at level ${[5, 15, 30][stage]}`}
+                {stage < 3 && ` · grows into a ${STAGE_NAMES[stage + 1].toLowerCase()} at level ${[5, 15, 30][stage]}`}
               </div>
             </div>
             <div className="grid w-full grid-cols-3 gap-4 sm:w-auto sm:min-w-80 sm:flex-1">
