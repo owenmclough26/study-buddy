@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-hand: "Caveat", "Comic Sans MS", cursive;
+
+  /* warm, paper-and-wood palette */
+  --color-ink: #2f2622;
+  --color-cream: #f3eadc;
+  --color-paper: #fffaf2;
+  --color-line: #e6d9c6;
+  --color-accent: #cf6440;
+  --color-accent-dark: #a84d2e;
+  --color-accent-soft: #f6e0d3;
+  --color-sage: #7d9b72;
+  --color-sage-soft: #e3ebdc;
+  --color-mustard: #dfa63b;
+  --color-mustard-soft: #f8ead0;
+  --color-wood: #a2724c;
+}
+
+html, body, #root { height: 100%; }
+body {
+  background-color: var(--color-cream);
+  /* faint paper grain */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .25 0 0 0 0 .15 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--color-accent-soft); }
+
+@keyframes float { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+@keyframes sway { 0%, 100% { transform: rotate(-2deg) } 50% { transform: rotate(2deg) } }
+@keyframes breathe { 0%, 100% { transform: scale(0.6); opacity: .55 } 50% { transform: scale(1); opacity: 1 } }
+@keyframes pop { 0% { transform: scale(.94); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
+@keyframes flicker { 0%, 100% { opacity: .9 } 50% { opacity: .75 } }
+@keyframes drift { 0% { transform: translateX(0) } 100% { transform: translateX(40px) } }
+.anim-float { animation: float 3s ease-in-out infinite; }
+.anim-float-slow { animation: float 5s ease-in-out infinite; }
+.anim-sway { animation: sway 4s ease-in-out infinite; transform-origin: 50% 100%; }
+.anim-breathe { animation: breathe 8s ease-in-out infinite; }
+.anim-pop { animation: pop .22s ease-out; }
+.anim-flicker { animation: flicker 3s ease-in-out infinite; }
+.anim-drift { animation: drift 18s ease-in-out infinite alternate; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-float, .anim-float-slow, .anim-sway, .anim-breathe, .anim-flicker, .anim-drift { animation: none; }
+}
+
+@utility card {
+  border-radius: 20px;
+  background: var(--color-paper);
+  border: 1.5px solid var(--color-line);
+  box-shadow: 0 2px 0 var(--color-line), 0 14px 30px -22px rgb(90 55 25 / .45);
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-extrabold transition select-none disabled:opacity-40 disabled:pointer-events-none;
+  &:active { transform: translateY(2px); }
+}
+@utility btn-primary {
+  @apply btn bg-accent text-paper;
+  box-shadow: 0 3px 0 var(--color-accent-dark);
+  &:hover { filter: brightness(1.05); }
+  &:active { box-shadow: 0 1px 0 var(--color-accent-dark); }
+}
+@utility btn-ghost {
+  @apply btn bg-paper text-ink;
+  border: 1.5px solid var(--color-line);
+  box-shadow: 0 2px 0 var(--color-line);
+  &:hover { background: #fff; }
+  &:active { box-shadow: none; }
+}
+@utility btn-danger {
+  @apply btn text-accent-dark hover:bg-accent-soft;
+}
+@utility input {
+  @apply w-full rounded-xl bg-paper px-3 py-2 text-sm outline-none placeholder:text-ink/35;
+  border: 1.5px solid var(--color-line);
+  &:focus { border-color: var(--color-accent); box-shadow: 0 0 0 4px rgb(207 100 64 / .14); }
+}
+@utility label {
+  @apply mb-1 block text-[13px] font-bold text-ink/65;
+}
+/* notebook paper */
+@utility ruled {
+  background-image: linear-gradient(to bottom, transparent 43px, var(--color-line) 43px, var(--color-line) 44px);
+  background-size: 100% 44px;
+}
