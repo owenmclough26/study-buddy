@@ -1,7 +1,7 @@
 import { useEffect, useState, type DragEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../../lib/store'
-import { categoryInfo, type Chunk } from '../../lib/types'
+import { categoryInfo, type BusyEvent, type Chunk, type SchoolBlock } from '../../lib/types'
 import { addDays, atMinutes, dateKey, fmtDay, fmtTime, hmToMinutes, startOfWeek } from '../../lib/time'
 import { roomLink } from '../../components/roomLink'
 import { Icon } from '../../components/Icon'
@@ -122,30 +122,26 @@ export function CalendarPage() {
                   )
                 })}
                 {/* events from linked Google calendars */}
-                {state.busy
-                  .filter((ev) => dateKey(new Date(ev.start)) === key)
-                  .map((ev, i) => {
-                    const s = new Date(ev.start)
-                    const e = new Date(ev.end)
-                    const sMin = Math.max(dayStart, s.getHours() * 60 + s.getMinutes())
-                    const eMin = Math.min(dayEnd, dateKey(e) === key ? e.getHours() * 60 + e.getMinutes() : dayEnd)
-                    if (eMin <= sMin) return null
-                    return (
-                      <div
-                        key={`busy-${i}-${ev.start}`}
-                        className="absolute inset-x-1 overflow-hidden rounded-lg border-[1.5px] border-dashed border-ink/25 bg-[repeating-linear-gradient(135deg,rgb(47_38_34/.05)_0_6px,rgb(47_38_34/.09)_6px_12px)] px-1.5 py-1 text-[11px] leading-tight"
-                        style={{ top: (sMin - dayStart) * PX_PER_MIN, height: Math.max((eMin - sMin) * PX_PER_MIN - 2, 14) }}
-                        title={`${ev.title} (from your linked calendar)`}
-                      >
-                        <div className="truncate font-bold text-ink/65">{ev.title}</div>
-                        {(eMin - sMin) * PX_PER_MIN > 30 && (
-                          <div className="truncate text-ink/45">
-                            {fmtTime(s)} – {fmtTime(e)}
-                          </div>
-                        )}
+                {busyLayout(state.busy, key, blocks, dayStart, dayEnd).map(({ ev, sMin, eMin, lane, lanes }, i) => (
+                  <div
+                    key={`busy-${i}-${ev.start}`}
+                    className="absolute overflow-hidden rounded-lg border-[1.5px] border-dashed border-ink/25 bg-[repeating-linear-gradient(135deg,rgb(47_38_34/.05)_0_6px,rgb(47_38_34/.09)_6px_12px)] px-1.5 py-1 text-[11px] leading-tight"
+                    style={{
+                      top: (sMin - dayStart) * PX_PER_MIN,
+                      height: Math.max((eMin - sMin) * PX_PER_MIN - 2, 14),
+                      left: `calc(${(lane / lanes) * 100}% + 4px)`,
+                      width: `calc(${100 / lanes}% - 8px)`,
+                    }}
+                    title={`${ev.title}: ${fmtTime(new Date(ev.start))} – ${fmtTime(new Date(ev.end))} (from your linked calendar)`}
+                  >
+                    <div className="truncate font-bold text-ink/65">{ev.title}</div>
+                    {(eMin - sMin) * PX_PER_MIN > 30 && lanes === 1 && (
+                      <div className="truncate text-ink/45">
+                        {fmtTime(new Date(ev.start))} – {fmtTime(new Date(ev.end))}
                       </div>
-                    )
-                  })}
+                    )}
+                  </div>
+                ))}
                 {chunks.map((c) => (
                   <ChunkBlock key={c.id} chunk={c} top={top(new Date(c.start_at))} selected={selected === c.id} onSelect={() => setSelected(selected === c.id ? null : c.id)} />
                 ))}
@@ -223,4 +219,41 @@ function ChunkBlock({ chunk: c, top, selected, onSelect }: { chunk: Chunk; top: 
       {h > 30 && <div className="truncate opacity-85">{fmtTime(s)} – {fmtTime(e)}</div>}
     </button>
   )
+}
+
+/**
+ * Linked-calendar events to draw on one day. Events that are just a copy of a class already in
+ * the school schedule are hidden (many students keep their classes in Google Calendar too), and
+ * events that overlap each other sit side by side instead of on top of each other.
+ */
+function busyLayout(busy: BusyEvent[], key: string, blocks: SchoolBlock[], dayStart: number, dayEnd: number) {
+  const mins = (d: Date) => d.getHours() * 60 + d.getMinutes()
+  const items = busy
+    .filter((ev) => dateKey(new Date(ev.start)) === key)
+    .map((ev) => {
+      const s = new Date(ev.start)
+      const e = new Date(ev.end)
+      return { ev, sMin: Math.max(dayStart, mins(s)), eMin: Math.min(dayEnd, dateKey(e) === key ? mins(e) : dayEnd) }
+    })
+    .filter(({ sMin, eMin }) => eMin > sMin)
+    // hide duplicates of classes: mostly covered by a school block
+    .filter(({ sMin, eMin }) => {
+      const covered = blocks.reduce((sum, b) => sum + Math.max(0, Math.min(eMin, hmToMinutes(b.end_time)) - Math.max(sMin, hmToMinutes(b.start_time))), 0)
+      return covered < (eMin - sMin) * 0.6
+    })
+    .sort((a, b) => a.sMin - b.sMin || b.eMin - a.eMin)
+
+  // greedy lanes, then each cluster of overlapping events shares its lane count
+  const laneEnds: number[] = []
+  const placed = items.map((it) => {
+    let lane = laneEnds.findIndex((end) => end <= it.sMin)
+    if (lane === -1) lane = laneEnds.push(it.eMin) - 1
+    else laneEnds[lane] = it.eMin
+    return { ...it, lane, lanes: 1 }
+  })
+  for (const p of placed) {
+    const overlapping = placed.filter((q) => q.sMin < p.eMin && q.eMin > p.sMin)
+    p.lanes = Math.max(...overlapping.map((q) => q.lane)) + 1
+  }
+  return placed
 }
