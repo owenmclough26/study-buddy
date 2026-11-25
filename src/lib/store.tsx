@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Repo } from './repo'
 import { uid } from './repo'
-import type { Buddy, Category, Chunk, FocusSession, InventoryItem, Profile, RoomKey, SchoolBlock, Species, Task } from './types'
+import type { Buddy, BusyEvent, Category, Chunk, FocusSession, InventoryItem, LinkedCalendar, Profile, RoomKey, SchoolBlock, Species, Task } from './types'
+import { fetchBusy } from './calendars'
 import { normalizeSpecies, type DecorSlot } from './types'
 import type { DecorItem } from './decor'
 import { track } from './analytics'
@@ -33,6 +34,23 @@ interface State {
   inventory: InventoryItem[]
   /** task id → minutes that didn't fit before the due date */
   unfit: Record<string, number>
+  /** linked Google/Outlook/iCloud calendars */
+  calendars: LinkedCalendar[]
+  /** events from those calendars for the next two weeks; nothing gets planned on top of them */
+  busy: BusyEvent[]
+  /** calendar id → why it couldn't be read */
+  calendarErrors: Record<string, string>
+  calendarsSyncing: boolean
+}
+
+const BUSY_CACHE = 'studybuddy:busy'
+function cachedBusy(): BusyEvent[] {
+  try {
+    const list = JSON.parse(localStorage.getItem(BUSY_CACHE) ?? '[]') as BusyEvent[]
+    return list.filter((e) => new Date(e.end).getTime() > Date.now())
+  } catch {
+    return []
+  }
 }
 
 const initial: State = {
@@ -47,6 +65,10 @@ const initial: State = {
   sessions: [],
   inventory: [],
   unfit: {},
+  calendars: [],
+  busy: [],
+  calendarErrors: {},
+  calendarsSyncing: false,
 }
 
 export interface NewTask {
@@ -123,7 +145,7 @@ function useStore(repo: Repo, userId: string) {
       else if (c.status === 'planned' && !c.pinned && ms(c.start_at) >= now.getTime()) candidates.push(c)
       else keep.push(c)
     }
-    const result = schedule({ blocks: s.blocks, prefs: s.profile, tasks: s.tasks, fixed: keep, now })
+    const result = schedule({ blocks: s.blocks, prefs: s.profile, tasks: s.tasks, fixed: keep, now, busy: s.busy })
     const byKey = new Map(candidates.map((c) => [chunkKey(c.task_id, ms(c.start_at), ms(c.end_at)), c]))
     const reused: Chunk[] = []
     const fresh: Chunk[] = []
@@ -166,6 +188,32 @@ function useStore(repo: Repo, userId: string) {
     commit({ chunks: ref.current.chunks.map((c) => (ids.has(c.id) ? { ...c, status: 'missed' } : c)) })
     for (const c of missed) persist(() => repo.update('scheduled_chunks', c.id, { status: 'missed' }))
   }, [commit, persist, repo])
+
+  /** Re-read linked calendars (via the calendar-busy function) and re-plan around their events. */
+  const refreshBusy = useCallback(async () => {
+    const cals = ref.current.calendars
+    if (repo.mode !== 'cloud' || !cals.length) {
+      if (ref.current.busy.length || Object.keys(ref.current.calendarErrors).length) {
+        commit({ busy: [], calendarErrors: {} })
+        replan()
+      }
+      return
+    }
+    commit({ calendarsSyncing: true })
+    try {
+      const res = await fetchBusy(cals)
+      commit({ busy: res.events, calendarErrors: res.errors, calendarsSyncing: false })
+      try {
+        localStorage.setItem(BUSY_CACHE, JSON.stringify(res.events))
+      } catch {
+        /* cache is optional */
+      }
+      replan()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Couldn’t reach your calendar right now.'
+      commit({ calendarsSyncing: false, calendarErrors: Object.fromEntries(cals.map((c) => [c.id, msg])) })
+    }
+  }, [commit, replan, repo])
 
   // Initial load
   const loaded = useRef(false)
@@ -212,15 +260,38 @@ function useStore(repo: Repo, userId: string) {
           const pid = profile.id
           persist(() => repo.update('profiles', pid, { timezone: tz }))
         }
-        commit({ loading: false, profile, blocks, tasks, chunks, buddy, sessions, inventory })
+        // linked calendars are optional (and the table may not exist yet), so never let them block loading
+        const calendars = await repo.list<LinkedCalendar>('external_calendars').catch(() => [] as LinkedCalendar[])
+        commit({ loading: false, profile, blocks, tasks, chunks, buddy, sessions, inventory, calendars, busy: calendars.length ? cachedBusy() : [] })
         markMissed()
         replan()
+        if (calendars.length) void refreshBusy()
       } catch (e) {
         commit({ loading: false })
         fail(e)
       }
     })()
-  }, [commit, fail, markMissed, persist, replan, repo, userId])
+  }, [commit, fail, markMissed, persist, refreshBusy, replan, repo, userId])
+
+  // Calendars change during the day (practice moved, new plans), so check them again now and then
+  useEffect(() => {
+    let last = Date.now()
+    const t = window.setInterval(() => {
+      last = Date.now()
+      void refreshBusy()
+    }, 30 * 60_000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && Date.now() - last > 5 * 60_000) {
+        last = Date.now()
+        void refreshBusy()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.clearInterval(t)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [refreshBusy])
 
   // Keep the plan fresh while the tab is open
   useEffect(() => {
@@ -507,6 +578,21 @@ function useStore(repo: Repo, userId: string) {
         persist(() => repo.update('buddies', b.id, { happiness }))
         return true
       },
+      // Linked calendars
+      addCalendar(url: string, label: string) {
+        const row: LinkedCalendar = { id: uid(), url: url.trim(), label: label.trim() || 'My calendar' }
+        commit({ calendars: [...ref.current.calendars, row] })
+        persist(() => repo.insert('external_calendars', [row]))
+        track('calendar_linked')
+        void refreshBusy()
+      },
+      removeCalendar(id: string) {
+        commit({ calendars: ref.current.calendars.filter((c) => c.id !== id) })
+        persist(() => repo.remove('external_calendars', [id]))
+        void refreshBusy()
+      },
+      refreshCalendars: () => refreshBusy(),
+
       renameBuddy(name: string) {
         const b = ref.current.buddy
         if (!b) return
@@ -540,7 +626,7 @@ function useStore(repo: Repo, userId: string) {
         track('relax_break_taken', { minutes })
       },
     }
-  }, [commit, patchChunk, patchTask, persist, replan, repo, rewardBuddy, toast, touchStreak])
+  }, [commit, patchChunk, patchTask, persist, refreshBusy, replan, repo, rewardBuddy, toast, touchStreak])
 
   return { state, actions, mode: repo.mode }
 }

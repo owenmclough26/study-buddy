@@ -128,3 +128,24 @@ describe('schedule', () => {
     expect(schedule({ blocks: school, prefs, tasks: [t], fixed: [], now: NOW }).chunks).toEqual([])
   })
 })
+
+describe('linked calendar events', () => {
+  it('never plans on top of a busy event (with buffer)', () => {
+    // soccer practice Monday 16:00-18:00
+    const busy = [{ start: new Date(2026, 10, 23, 16, 0), end: new Date(2026, 10, 23, 18, 0) }]
+    const t = task({ estimated_minutes: 300, due_at: new Date(2026, 10, 24, 22, 0).toISOString() })
+    const { chunks } = schedule({ blocks: school, prefs, tasks: [t], fixed: [], now: NOW, busy })
+    const bs = busy[0].start.getTime() - 15 * 60_000
+    const be = busy[0].end.getTime() + 15 * 60_000
+    expect(chunks.length).toBeGreaterThan(0)
+    for (const c of chunks) expect(c.end.getTime() <= bs || c.start.getTime() >= be).toBe(true)
+  })
+
+  it('accepts ISO strings from the server', () => {
+    const busy = [{ start: new Date(2026, 10, 23, 15, 0).toISOString(), end: new Date(2026, 10, 23, 22, 0).toISOString() }]
+    const t = task({ estimated_minutes: 45, due_at: new Date(2026, 10, 23, 23, 0).toISOString() })
+    // Monday after school is fully busy, and only 7:00-7:45 is left before school
+    const { chunks } = schedule({ blocks: school, prefs, tasks: [t], fixed: [], now: NOW, busy })
+    for (const c of chunks) expect(c.start.getHours()).toBeLessThan(8)
+  })
+})

@@ -16,6 +16,8 @@ export interface SchedulerInput {
   fixed: Pick<Chunk, 'task_id' | 'start_at' | 'end_at' | 'status'>[]
   now: Date
   horizonDays?: number
+  /** Events from linked calendars (practice, work, appointments). Nothing gets planned on top of them. */
+  busy?: { start: string | Date; end: string | Date }[]
 }
 
 export interface PlannedChunk {
@@ -32,6 +34,8 @@ export interface SchedulerResult {
 
 /** Gap kept around school blocks. */
 export const SCHOOL_BUFFER_MIN = 15
+/** Gap kept around events from linked calendars (getting there, getting home). */
+export const BUSY_BUFFER_MIN = 15
 /** Short break after each planned chunk. */
 export const BREAK_MIN = 10
 /** Smallest chunk worth scheduling (unless the task needs less than this). */
@@ -93,6 +97,11 @@ export function freeWindows(input: SchedulerInput): Interval[] {
     const cs = new Date(c.start_at).getTime()
     const ce = new Date(c.end_at).getTime() + BREAK_MIN * MIN
     free = subtract(free, [cs, ce])
+  }
+  for (const ev of input.busy ?? []) {
+    const es = new Date(ev.start).getTime() - BUSY_BUFFER_MIN * MIN
+    const ee = new Date(ev.end).getTime() + BUSY_BUFFER_MIN * MIN
+    if (ee > es) free = subtract(free, [es, ee])
   }
   return free.sort((a, b) => a[0] - b[0])
 }

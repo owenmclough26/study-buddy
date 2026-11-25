@@ -121,6 +121,31 @@ export function CalendarPage() {
                     </div>
                   )
                 })}
+                {/* events from linked Google calendars */}
+                {state.busy
+                  .filter((ev) => dateKey(new Date(ev.start)) === key)
+                  .map((ev, i) => {
+                    const s = new Date(ev.start)
+                    const e = new Date(ev.end)
+                    const sMin = Math.max(dayStart, s.getHours() * 60 + s.getMinutes())
+                    const eMin = Math.min(dayEnd, dateKey(e) === key ? e.getHours() * 60 + e.getMinutes() : dayEnd)
+                    if (eMin <= sMin) return null
+                    return (
+                      <div
+                        key={`busy-${i}-${ev.start}`}
+                        className="absolute inset-x-1 overflow-hidden rounded-lg border-[1.5px] border-dashed border-ink/25 bg-[repeating-linear-gradient(135deg,rgb(47_38_34/.05)_0_6px,rgb(47_38_34/.09)_6px_12px)] px-1.5 py-1 text-[11px] leading-tight"
+                        style={{ top: (sMin - dayStart) * PX_PER_MIN, height: Math.max((eMin - sMin) * PX_PER_MIN - 2, 14) }}
+                        title={`${ev.title} (from your linked calendar)`}
+                      >
+                        <div className="truncate font-bold text-ink/65">{ev.title}</div>
+                        {(eMin - sMin) * PX_PER_MIN > 30 && (
+                          <div className="truncate text-ink/45">
+                            {fmtTime(s)} – {fmtTime(e)}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 {chunks.map((c) => (
                   <ChunkBlock key={c.id} chunk={c} top={top(new Date(c.start_at))} selected={selected === c.id} onSelect={() => setSelected(selected === c.id ? null : c.id)} />
                 ))}
@@ -136,7 +161,7 @@ export function CalendarPage() {
       </div>
 
       <p className="text-xs text-ink/45">
-        Drag a session to move it. Moved sessions stay pinned where you put them, and the rest of your plan works around them. The faded blocks are your classes.
+        Drag a session to move it. Moved sessions stay pinned where you put them, and the rest of your plan works around them. The faded blocks are your classes, and dashed ones come from your linked Google Calendar.
       </p>
 
       {sel && selTask && (

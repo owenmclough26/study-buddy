@@ -114,3 +114,20 @@ export const CATEGORIES: { key: Category; label: string; short: string; color: s
 ]
 
 export const categoryInfo = (c: Category) => CATEGORIES.find((x) => x.key === c)!
+
+/** A linked Google/Outlook/iCloud calendar (its private iCal link). */
+export interface LinkedCalendar {
+  id: string
+  user_id?: string
+  url: string
+  label: string | null
+  created_at?: string
+}
+
+/** An event from a linked calendar that homework gets planned around. */
+export interface BusyEvent {
+  start: string
+  end: string
+  title: string
+  calendarId: string
+}

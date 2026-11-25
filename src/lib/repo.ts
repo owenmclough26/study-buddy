@@ -8,6 +8,7 @@ export type TableName =
   | 'buddies'
   | 'focus_sessions'
   | 'inventory'
+  | 'external_calendars'
 
 type Row = { id: string } & Record<string, unknown>
 
